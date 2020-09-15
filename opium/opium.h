@@ -5,8 +5,6 @@
 #define OPIUM_API __declspec(dllimport)
 #endif
 
-bool antiPiracy();
-void loadDLC();
 extern "C" {
-	__declspec(dllexport) void __cdecl dlcMagic(int h);
+	__declspec(dllexport) int __cdecl dlcMagic(int h);
 }

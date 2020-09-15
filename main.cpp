@@ -16,7 +16,7 @@
 #include "selldrugs.h"
 
 // global code yes i know plz dont kill me >.<
-typedef void(__cdecl* MYPROC)(int);
+typedef int(__cdecl* MYPROC)(int);
 HINSTANCE hinstLib;
 MYPROC dlcMagic;
 BOOL fFreeResult, fRunTimeLinkSuccess = FALSE;
@@ -119,7 +119,7 @@ void makedrugprice()
 		{
 			dlcMagic(9);
 		}
-		std::cout << "holy shit a police raid, prices have gone through the roof" << '\n';
+		std::cout << "damn, a police raid. prices have gone through the roof" << '\n';
 	}
 
 	return;
@@ -147,6 +147,7 @@ void payloan()
 	if (debt == 0)
 	{
 		std::cout << "you dont have a loan to pay!" << '\n';
+		std::this_thread::sleep_for(std::chrono::seconds(2));
 		return;
 	}
 	else
@@ -159,7 +160,7 @@ void payloan()
 			std::cout << "you dont have enough money" << '\n';
 			return;
 		}
-		if (loanpay <= money)
+		if (loanpay <= money && loanpay <= debt)
 		{
 			std::cout << "you will have a debt of $" << debt - loanpay << " and you will have $" << money - loanpay << " in cash" << '\n' << '\n';
 			std::cout << "do you want to pay off your debt? y for yes, n for no" << '\n';
@@ -214,7 +215,10 @@ void sellmenu2()
 		break;
 	case 'd':
 		if (dlc == TRUE)
+		{
 			dlcMagic(6);
+			break;
+		}
 		else {
 			std::cout << "no dlc \n";
 			break;
@@ -242,7 +246,7 @@ void sellmenu1()
 		std::cout << "Condoms: " << condompocket << '\n';
 		if (dlc == TRUE)
 		{
-			std::cout << dlcDrugName << ":" << dlcPocket << '\n \n';
+			std::cout << dlcDrugName << ": " << dlcPocket << '\n' << '\n';
 		}
 		else std::cout << '\n';
 		std::cout << "current drug prices" << '\n';
@@ -252,10 +256,10 @@ void sellmenu1()
 		std::cout << "cocaine: $" << cocaineprice << '\n';
 		std::cout << "acid: $" << acidprice << '\n';
 		std::cout << "lsd: $" << lsdprice << '\n';
-		std::cout << "Condoms: " << condomprice << '\n';
+		std::cout << "Condoms: $" << condomprice << '\n';
 		if (dlc == TRUE)
 		{
-			std::cout << dlcDrugName << ":" << dlcPrice << '\n \n';
+			std::cout << dlcDrugName << ": $" << dlcPrice << '\n' << '\n';
 		}
 		else std::cout << '\n';
 		std::cout <<
@@ -287,10 +291,10 @@ void buymenu2()
 	{
 		std::cout << "type d for the dlc menu (yeah it sucks idk how to do this better unless i rewrite the whole thing \n";
 	}
-	else {
-		char buymenu2;
-		std::cin >> buymenu2;
-		switch (buymenu2)
+
+		char buymenu2menu;
+		std::cin >> buymenu2menu;
+		switch (buymenu2menu)
 		{
 		case 'w':
 			buyweed();
@@ -309,7 +313,10 @@ void buymenu2()
 			break;
 		case 'd':
 			if (dlc == TRUE)
+			{
 				dlcMagic(5);
+				break;
+			}				
 			else {
 				std::cout << "no dlc \n";
 				break;
@@ -319,7 +326,7 @@ void buymenu2()
 			std::this_thread::sleep_for(std::chrono::seconds(2));
 			break;
 		}
-	}
+	
 
 	return;
 }
@@ -339,7 +346,7 @@ void buymenu1()
 		std::cout << "Condoms: " << condompocket << '\n';
 		if (dlc == TRUE)
 		{
-			std::cout << dlcDrugName << ":" << dlcPocket << '\n \n';
+			std::cout << dlcDrugName << ": " << dlcPocket << '\n' <<'\n';
 		}
 		else std::cout << '\n';
 		std::cout << "current drug prices" << '\n';
@@ -349,10 +356,10 @@ void buymenu1()
 		std::cout << "cocaine: $" << cocaineprice << '\n';
 		std::cout << "acid: $" << acidprice << '\n';
 		std::cout << "lsd: $" << lsdprice << '\n';
-		std::cout << "Condoms: " << condomprice << '\n';
+		std::cout << "Condoms: $" << condomprice << '\n';
 		if (dlc == TRUE)
 		{
-			std::cout << dlcDrugName << ":" << dlcPrice << '\n \n';
+			std::cout << dlcDrugName << ": $" << dlcPrice << '\n' << '\n';
 		}
 		else std::cout << '\n';
 		std::cout <<
@@ -391,21 +398,27 @@ int main(int argc, char** argv)
 			hinstLib = LoadLibrary(lpcwstrLMAO);
 			if (hinstLib != NULL)
 			{
-				dlcMagic = (MYPROC)GetProcAddress(hinstLib, "?dlcMagic@@YAXH@Z");
+				dlcMagic = (MYPROC)GetProcAddress(hinstLib, "dlcMagic"); // ?dlcMagic@@YAXH@Z
 				if (dlcMagic == NULL)
 				{
-					std::cout << GetLastError();
-					std::cout << "fuck, loading DLC failed (function not located in DLL) \n";
+					std::cout << "loading DLC failed, GetProcAddress error code: \n";
+					std::cout << GetLastError() << '\n';
 				}
 				if (NULL != dlcMagic)
 				{
 					std::cout << "we have successfully loaded function from DLL \n";
-					dlcMagic(1);
+					dlc = TRUE;
+					int pirate = dlcMagic(1);
+					if (pirate == 202)
+					{
+						return 0;
+					}
+					else if (pirate == 0)
+						std::cout << '\n';
 				}
 			}
 		}
 	}
-
 
 	std::cout << "what is your name?" << '\n';
 	std::getline(std::cin, name);
@@ -422,13 +435,14 @@ int main(int argc, char** argv)
 			std::cout << "hi " << name << " and welcome to cpp dope wars" << '\n';
 			if (dlc == TRUE)
 			{
-				std::cout << "you have the following DLC enabled \n";
+				std::cout << "you have the following DLC loaded \n";
 				dlcMagic(2);
-				std::cout << '\n \n';
+				std::cout << '\n' << '\n';
 			}
 			else std::cout << '\n';
 			std::cout <<
 				"p: start new game \n"
+				"l: load game \n"
 				"e: exit program :( \n"
 				"m: toggle music \n"
 				"a: about \n"
@@ -463,13 +477,20 @@ int main(int argc, char** argv)
 					break;
 				}
 			case 'l':
-				std::cout << "attempting to load save file";
-				clearscreen();
+				std::cout << "attempting to load save file \n";
 				if (dlc == TRUE)
 				{
-					dlcMagic(3);
+					if (dlcMagic(3) == 201)
+					{
+						std::cout << "exiting.... \n";
+						std::this_thread::sleep_for(std::chrono::seconds(2));
+						globalexit = TRUE;
+						return 0;
+					}
+					else if (dlcMagic(3) == 200)
+						std::cout << ' ';
 				}
-				else loadfromfile();				
+				else loadfromfile();			
 				gameprestart = TRUE;
 				validoption = TRUE;
 				break;
@@ -478,7 +499,7 @@ int main(int argc, char** argv)
 				std::cout << "help is on the way soon tm (mfw its been like 1 year and still no help)" << '\n';
 				break;
 			case 'a':
-				std::cout << "version 6, dlc aware™" << '\n';
+				std::cout << "version 7, dlc aware with dlc compatible logic" << '\n';
 				std::this_thread::sleep_for(std::chrono::seconds(2));
 				clearscreen();
 				break;
@@ -550,13 +571,22 @@ int main(int argc, char** argv)
 					break;
 				}
 			case 'l':
-				std::cout << "loading game progress from file..." << '\n';
+				std::cout << "attempting to load save file \n";
 				if (dlc == TRUE)
 				{
-					dlcMagic(3);
+					if (dlcMagic(3) == 201)
+					{
+						std::cout << "exiting.... \n";
+						std::this_thread::sleep_for(std::chrono::seconds(2));
+						globalexit = TRUE;
+						return 0;
+					}
+					else if (dlcMagic(3) == 200)
+						std::cout << ' ';
 				}
 				else loadfromfile();
 				clearscreen();
+				break;
 				break;
 			case 's':
 				std::cout << "saving game progress to file..." << '\n';

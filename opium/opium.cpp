@@ -6,13 +6,14 @@
 #include <string>
 #include <cpr/cpr.h>
 #include <Windows.h>
+#include <boost/exception/all.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 
 // if you wanted to ever make your own DLC, edit the values here
-std::string dlcName = "Opium Expansion v1";
+std::string dlcName = "Opium Expansion v1.1";
 std::string key = "420"; // simple anti piracy check attempt (too easy to bypass smh)
-std::string authServer = "https://penguin2233.gq/projects/cpp-dopewars/dlc.php"; // key checking server, more info on github
+std::string authServer = "https://penguin2233.gq/projects/cpp-dopewars/key.php"; // key checking server, more info on github
 int raidAdd = 5000;
 int randomRange1 = 1000;
 int randomRange2 = 10000;
@@ -33,26 +34,22 @@ __declspec(dllimport) extern std::string dlcDrugLetter;
 __declspec(dllimport) extern std::mt19937 eng;
 
 bool antiPiracy() {
+	std::cout << "checking serial key (" << key << ")" << '\n';
 	cpr::Response keyCheckRequest = cpr::Get(cpr::Url{ authServer },
 		cpr::Parameters{ {"key", key} });
-	if (keyCheckRequest.status_code == 200)
+	if (keyCheckRequest.status_code == 420)
 	{
 		return true;
 	}
-	if (keyCheckRequest.status_code == 420)
+	if (keyCheckRequest.status_code == 402)
 	{
 		return false;
 	}
-	if (keyCheckRequest.status_code != 200 && keyCheckRequest.status_code != 420)
+	if (keyCheckRequest.status_code != 420 && keyCheckRequest.status_code != 402)
 	{
 		std::cout << "failed to verify dlc key because of server error (EA games moment) \n";
 		return false;
 	}
-}
-
-int panik() {
-	system("color");
-	return 0;
 }
 
 void clearscreen()
@@ -93,36 +90,46 @@ void clearscreen()
 }
 
 void sell2() {
-	std::cout << "how much opium do you want to sell? enter amount then press enter" << '\n';
-	int opiumsellamount;
-	std::cin >> opiumsellamount;
-	int opiumselltotal = opiumsellamount * dlcPrice;
-	std::cout << "your total is $" << opiumselltotal << " do you want to sell? y for yes, n for no" << '\n';
-	char sell;
-	std::cin >> sell;
-	switch (sell)
+	std::cout << "sell opium (o) or anything else to exit \n";
+	char sell2menu;
+	std::cin >> sell2menu;
+	switch (sell2menu) {
+	case 'o':
 	{
-	case 'y':
-		if (dlcPocket >= opiumsellamount)
+		std::cout << "how much opium do you want to sell? enter amount then press enter" << '\n';
+		int opiumsellamount;
+		std::cin >> opiumsellamount;
+		int opiumselltotal = opiumsellamount * dlcPrice;
+		std::cout << "your total is $" << opiumselltotal << " do you want to sell? y for yes, n for no" << '\n';
+		char sell;
+		std::cin >> sell;
+		switch (sell)
 		{
-			money = money + opiumselltotal;
-			dlcPocket = dlcPocket - opiumsellamount;
+		case 'y':
+			if (dlcPocket >= opiumsellamount)
+			{
+				money = money + opiumselltotal;
+				dlcPocket = dlcPocket - opiumsellamount;
+				clearscreen();
+			}
+			else if (dlcPocket < opiumsellamount)
+			{
+				std::cout << "not enough drugs :(" << '\n';
+				std::this_thread::sleep_for(std::chrono::seconds(2));
+				clearscreen();
+			}
+			break;
+		case 'n':
 			clearscreen();
-		}
-		else if (dlcPocket < opiumsellamount)
-		{
-			std::cout << "not enough drugs :(" << '\n';
+			break;
+		default:
+			std::cout << "invalid choice." << '\n';
 			std::this_thread::sleep_for(std::chrono::seconds(2));
 			clearscreen();
+			break;
 		}
-		break;
-	case 'n':
-		clearscreen();
-		break;
+	}
 	default:
-		std::cout << "invalid choice." << '\n';
-		std::this_thread::sleep_for(std::chrono::seconds(2));
-		clearscreen();
 		break;
 	}
 	return;
@@ -176,66 +183,83 @@ void buy2() {
 	return;
 }
 
-void save() {
+int save() {
 	std::cout << "dlc aware-ish save function (c) penguin2233 2020" << '\n';
-	boost::property_tree::ptree savefile;
+	try {
+		boost::property_tree::ptree savefile;
 
-	savefile.put("money.money", money);
-	savefile.put("money.debt", debt);
+		savefile.put("money.money", money);
+		savefile.put("money.debt", debt);
 
-	savefile.put("days.days", days);
+		savefile.put("days.days", days);
 
-	savefile.put("drugs.weed", weedpocket);
-	savefile.put("drugs.cocaine", cocainepocket);
-	savefile.put("drugs.acid", acidpocket);
-	savefile.put("drugs.lsd", lsdpocket);
-	savefile.put("drugs.condom", condompocket);
-	savefile.put("drugs.opium", dlcPocket);
+		savefile.put("drugs.weed", weedpocket);
+		savefile.put("drugs.cocaine", cocainepocket);
+		savefile.put("drugs.acid", acidpocket);
+		savefile.put("drugs.lsd", lsdpocket);
+		savefile.put("drugs.condom", condompocket);
+		savefile.put("drugs.opium", dlcPocket);
 
-	write_ini(name + ".sav", savefile);
-	return;
+		savefile.put("dlc.dlc", "1");
+
+		write_ini(name + ".sav", savefile);
+		return 200;
+	}
+	catch (boost::exception &e) {
+		std::cout << '\n' << "saving failed \n";
+		return 201;
+	}	
 }
 
-void load() {
+int load() {
 	std::cout << "dlc aware-ish load function (c) penguin2233 2020" << '\n';
 	boost::property_tree::ptree loadfile;
 
-	read_ini(name + ".sav", loadfile);
-
-	if (loadfile.get<int>("dlc.dlc") == 1)
-	{
-		money = loadfile.get<float>("money.money");
-		debt = loadfile.get<float>("money.debt");
-
-		days = loadfile.get<int>("days.days");
-
-		weedpocket = loadfile.get<int>("drugs.weed");
-		cocainepocket = loadfile.get<int>("drugs.cocaine");
-		acidpocket = loadfile.get<int>("drugs.acid");
-		lsdpocket = loadfile.get<int>("drugs.lsd");
-		condompocket = loadfile.get<int>("drugs.condom");
-
-		dlcPocket = loadfile.get<int>("drugs.opium");
+	try {
+		boost::property_tree::read_ini(name + ".sav", loadfile);
 	}
-	else {
-		std::cout << "this save file is incompatible with your current loaded DLCs :( \n";
-		panik();
+	catch (boost::exception &e) {
+		std::cout << "save file " << name << ".sav does not exist" << '\n';
+		return 201;
 	}
 
-	return;
+	try {
+		int dlcAware = loadfile.get<int>("dlc.dlc");
+		if (dlcAware == 1)
+		{
+			money = loadfile.get<float>("money.money");
+			debt = loadfile.get<float>("money.debt");
+
+			days = loadfile.get<int>("days.days");
+
+			weedpocket = loadfile.get<int>("drugs.weed");
+			cocainepocket = loadfile.get<int>("drugs.cocaine");
+			acidpocket = loadfile.get<int>("drugs.acid");
+			lsdpocket = loadfile.get<int>("drugs.lsd");
+			condompocket = loadfile.get<int>("drugs.condom");
+
+			dlcPocket = loadfile.get<int>("drugs.opium");
+			return 200;
+		}
+		else throw;
+	}
+	catch (boost::exception &e){
+		std::cout << '\n' << "save file is not compatible with this DLC \n";
+		return 201;
+	}
 }
 
 void loadDLC() {
-	std::cout << "loading" << dlcName << "\n";
+	std::cout << "loading " << dlcName << "\n";
 	dlcDrugName = "Opium";
 	dlcDrugLetter = 'o';
 	return;
 }
 
-void dlcMagic(int h)
+int dlcMagic(int h)
 {
 	switch (h) {
-	case 1: // check key and """load""" dlc
+	case 1: // check key and setup dlc variables
 		if (antiPiracy() == TRUE)
 		{
 			loadDLC();
@@ -244,23 +268,28 @@ void dlcMagic(int h)
 		{
 			system("color 1f");
 			std::cout << "the anti piracy check failed \n";
-			panik();
+			system("color");
+			return 202;
 		}
 		break;
 	case 2: // dlc info string
 		std::cout << dlcName <<'\n';
 		break;
-	case 3: // dlc aware-ish load
-		load();
-		break;
+	case 3: // dlc aware-ish load 
+		if (load() == 201)
+			return 201;
+		else if (load() == 200)
+			return 0;
 	case 4: // dlc aware-ish save
-		save();
-		break;
+		if (save() == 201)
+			return 201;
+		else if (save() == 200)
+			return 0;
 	case 5: // dlc aware-ish buy2 menu
 		buy2();
 		break;
-	case 6:
-		sell2();
+	case 6: // dlc aware-ish sell2 menu
+		sell2(); 
 		break;
 	case 8: // make prices
 	{
@@ -271,10 +300,11 @@ void dlcMagic(int h)
 	case 9: // raid pricing
 		dlcPrice = dlcPrice + raidAdd;
 		break;
-	default:
+	default: // just in case to prevent unknown progam behaviour
 		system("color 1f");
-		std::cout << "yo dude wtf the :b: rogram called dlcMagic() but in a fucked up way. program execution stopping to prevent bruh moment \n";
-		panik();
+		std::cout << "internal program error, stopping execution to prevent damage \n";
+		system("color");
+		return 203;
 	}
-	return;
+	return 0;
 }
